@@ -1,27 +1,29 @@
-// הוסף את הקוד הזה בתוך namespace WebLink
+namespace WebLink {
+    let lastAnswer = ""; // משתנה פנימי ששומר את התשובה האחרונה
 
-/**
- * מקשיב לכל הודעת רדיו נכנסת ומעביר אותה באופן אוטומטי לאפליקציה/אינטרנט
- * @param secure האם להעביר כשיחה מאובטחת, eg: true
- */
-//% block="העבר רדיו לרשת (Bridge)"
-export function bridgeRadioToWeb(): void {
-    // האזנה לכל מחרוזת רדיו נכנסת
-    radio.onReceivedString(function (receivedString: string) {
-        // שליחה מידית ל-Serial כדי שהאפליקציה תעלה את זה לענן
-        serial.writeLine("BRIDGE:" + receivedString);
+    /**
+     * מחזיר את התשובה האחרונה שהתקבלה מהאינטרנט (Web Answer)
+     */
+    //% block="ANSWER"
+    //% blockId=web_answer_reporter
+    export function getWebAnswer(): string {
+        return lastAnswer;
+    }
 
-        // אינדיקציה ויזואלית קטנה על המיקרוביט שהועבר מידע
-        led.plot(2, 2);
-        basic.pause(100);
-        led.unplot(2, 2);
-    });
+    // מעדכן את בלוק ה-onDataReceived כדי שישמור את התשובה בתוך lastAnswer
+    //% block="כשמתקבל נתון מהאינטרנט | בצע:"
+    //% handlerStatement=1
+    //% draggableParameters="reporter"
+    export function onDataReceived(handler: (data: string) => void) {
+        serial.onDataReceived(serial.delimiters(Delimiters.NewLine), function () {
+            let received = serial.readLine();
+            if (received.includes("WEB:")) {
+                let cleanData = received.replace("WEB:", "");
+                lastAnswer = cleanData; // שמירת הנתון לבלוק העגול
+                handler(cleanData);
+            }
+        });
+    }
 
-    // האזנה לכל מספר רדיו נכנס
-    radio.onReceivedNumber(function (receivedNumber: number) {
-        serial.writeLine("BRIDGE:" + receivedNumber.toString());
-        led.plot(2, 2);
-        basic.pause(100);
-        led.unplot(2, 2);
-    });
+    // ... שאר הבלוקים של WebLink (setName, requestData, webSearch וכו') ...
 }
